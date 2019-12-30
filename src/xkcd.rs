@@ -86,6 +86,9 @@ pub fn get_latest_comic() -> Result<Comic, String> {
 }
 
 pub fn get_comic(id: i32) -> Result<Comic, String> {
+    if id < 1 {
+        return Err(String::from("Invalid id of the comic. Should be bigger than 0."));
+    }
     let resp = ureq::get(format!("https://c.xkcd.com/api-0/jsonp/comic/{}", id).as_str())
         .timeout_connect(4_000)
         .call();
@@ -93,8 +96,18 @@ pub fn get_comic(id: i32) -> Result<Comic, String> {
     if !resp.ok() {
         return Err(String::from("Fetching latest comic failed miserably."));
     }
-    match serde_json::from_str(resp.into_string().unwrap().as_str()) {
-        Ok(c) => Ok(c),
+
+    // this is so retarded, but rustic matches are so lovely
+    // i will oseruse them until the end of the world
+    match resp.into_string(){
+        Ok(s) => match s.as_str() {
+            "Need more" => Err(String::from("Provided id was probably too large.")),
+            _ => match serde_json::from_str(s.as_str()){
+                Ok(c) => Ok(c),
+                Err(_) => Err(String::from("Failed to parse latest comic"))
+            }
+        },
         Err(_) => Err(String::from("Failed to parse latest comic"))
+
     }
 }
