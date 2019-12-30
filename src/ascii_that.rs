@@ -48,7 +48,7 @@ pub fn print_image(im: DynamicImage, width: Option<u32>, height: Option<u32>) {
 
     let parts: Vec<&str> = ascii.as_bytes()
         .chunks(w as usize)
-        .map(|c| unsafe { from_utf8_unchecked(c)}) // we can use unsafe, because the characters are surely ascii
+        .map(|c| unsafe { from_utf8_unchecked(c) }) // we can use unsafe, because the characters are surely ascii
         .collect();
     for s in parts {
         println!("{}", s);
