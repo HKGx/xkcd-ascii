@@ -7,6 +7,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-surf = "1.0.3"
+ureq = { version = "*", features = ["json"] }
 image = "0.22.3"
 clap = "2.33.0"
+serde_json = "1.0.44"
+serde = { version = "1.0.104", features = ["derive"] }
