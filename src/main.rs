@@ -2,7 +2,7 @@
 extern crate clap;
 
 use clap::{App, Arg};
-
+use crate::xkcd::Comic;
 
 mod ascii_that;
 mod xkcd;
@@ -19,17 +19,29 @@ fn main() {
             .required(false)
             .index(1)
             .validator(is_comic_id))
+        .arg(Arg::with_name("debug")
+            .hidden(true)
+            .long("debug"))
         .get_matches();
 
     // TODO: do the thing
 
-    //let id: xkcd::ComicId = value_t!(matches, "id", xkcd::ComicId).unwrap_or(xkcd::ComicId::Random);
+    let id: xkcd::ComicId = value_t!(matches, "id", xkcd::ComicId).unwrap_or(xkcd::ComicId::Random);
+    let debug = matches.is_present("debug");
 
-    //let comic = xkcd::get_latest_comic().unwrap();
+    let comic: Comic = match id {
+        xkcd::ComicId::Random => xkcd::get_random_comic().unwrap(),
+        xkcd::ComicId::Number(i) => xkcd::get_comic(i).unwrap(),
+    };
 
-    //let image = xkcd::get_comic_image(comic);
+    if debug {
+        println!("The comic we fetched: {:?}\n", comic)
+    }
 
-    //ascii_that::print_image(image.unwrap(), Some(80), Some(80));
+    let image = xkcd::get_comic_image(&comic).expect("Failed to get comic.");
+
+    // static width, too lazy to implement width and height arguments. maybe later
+    ascii_that::print_image(image, Some(80), Some(80));
 }
 
 fn is_comic_id(val: String) -> Result<(), String> {
