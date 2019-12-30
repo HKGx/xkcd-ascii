@@ -1,5 +1,6 @@
 extern crate ureq;
 extern crate image;
+extern crate rand;
 
 use image::DynamicImage;
 
@@ -7,13 +8,14 @@ use serde::{Serialize, Deserialize};
 
 use std::str::FromStr;
 use std::io::Read;
+use self::rand::Rng;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Comic {
     news: String,
     link: String,
     img: String,
-    num: i64,
+    num: i32,
     day: String,
     year: String,
     month: String,
@@ -22,7 +24,6 @@ pub struct Comic {
     transcript: String,
     alt: String,
 }
-
 
 #[derive(Debug)]
 pub enum ComicId {
@@ -46,7 +47,7 @@ impl FromStr for ComicId {
     }
 }
 
-pub fn get_comic_image(comic: Comic) -> Result<DynamicImage, String> {
+pub fn get_comic_image(comic: &Comic) -> Result<DynamicImage, String> {
     let resp = ureq::get(comic.img.as_str())
         .timeout_connect(8_000)
         .call();
@@ -56,11 +57,20 @@ pub fn get_comic_image(comic: Comic) -> Result<DynamicImage, String> {
     let mut reader = resp.into_reader();
     let mut bytes = vec![];
     reader.read_to_end(&mut bytes).expect("Something just failed. Eh.");
-    return match image::load_from_memory_with_format(bytes.as_slice(), image::ImageFormat::PNG) {
+    return match image::load_from_memory(bytes.as_slice()) {
         Ok(i) => Ok(i),
         Err(e) => Err(format!("{:?}", e)),
     };
 }
+
+pub fn get_random_comic() -> Result<Comic, String> {
+    let mut rng = rand::thread_rng();
+    let latest = get_latest_comic()
+        .expect("Failed to fetch latest comic for random comic.");
+    let comic_id = rng.gen_range(1, latest.num);
+    get_comic(comic_id)
+}
+
 
 pub fn get_latest_comic() -> Result<Comic, String> {
     let resp = ureq::get("https://c.xkcd.com/api-0/jsonp/comic")
@@ -76,6 +86,15 @@ pub fn get_latest_comic() -> Result<Comic, String> {
 }
 
 pub fn get_comic(id: i32) -> Result<Comic, String> {
-    // TODO: add the thing
-    unimplemented!();
+    let resp = ureq::get(format!("https://c.xkcd.com/api-0/jsonp/comic/{}", id).as_str())
+        .timeout_connect(4_000)
+        .call();
+
+    if !resp.ok() {
+        return Err(String::from("Fetching latest comic failed miserably."));
+    }
+    match serde_json::from_str(resp.into_string().unwrap().as_str()) {
+        Ok(c) => Ok(c),
+        Err(_) => Err(String::from("Failed to parse latest comic"))
+    }
 }
